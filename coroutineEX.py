@@ -62,6 +62,10 @@ if __name__ == '__main__':
     t1.join()
 """
 # EX2 coroutine way
+#正常情况下，声明一个生成器函数对象之后，这个对象的状态是创建，需要使用next函数激活使其处于挂起状态才可以接收外部send
+#可以借助函数装饰器，在装饰器中完成next函数的功能，这样我们就无需预先激活，直接向这个对象发送参数了。
+#以下是借助函数装饰器完成预激过程的例子（取自《fluent python》)
+"""
 def coroutine(func):
     @wraps(func)
     def prime(*args,**kwargs):
@@ -71,7 +75,7 @@ def coroutine(func):
     return prime
 
 @coroutine
-def averager():
+def averager1():
     result = namedtuple('Result','count average')
     total = 0.0
     average1 = None
@@ -86,9 +90,13 @@ def averager():
         average1 = total/count
     return result(total,average1)
 # 委派生成器
-def grouper(results,key):
+def grouper1(results,key):
     while True:
         results[key] = yield from averager()
+"""
+# EX3,使用委派生成器，灵活的实现对协程的控制以及结果的读取
+# yield from的具体语义在PEP380中有阐释，之所以不用对子生成器进行显示预激，是因为在委派生成器中已经进行了处理。
+"""
 data = {
     'girls;kg':
         [40.9, 38.5, 44.3, 42.2, 45.2, 41.7, 44.5, 38.0, 40.6, 44.5],
@@ -99,12 +107,31 @@ data = {
     'boys;m':
         [1.38, 1.5, 1.32, 1.25, 1.37, 1.48, 1.25, 1.49, 1.46],
 }
+def averager():
+	count = 0
+	term = 0.0
+	total = 0.0
+	average = 0.0
+	while True:
+		term = yield average
+		if term is None:
+			break
+		total += term
+		count += 1
+		average = total / count
+	return average
+
+def grouper(result,key):
+	while True:
+		result[key] = yield from averager() 
 
 if __name__ == '__main__':
-    result = {}
-    for key,values in data.items():
-        group = grouper(result,key)
-        next(group)
-        for value in values:
-            group.send(None)
-    print(result)
+	result = {}
+	for key,values in data.items():
+		group = grouper(result,key)
+		next(group)
+		for value in values:
+			group.send(value)
+		group.send(None)
+	print(result)
+"""
