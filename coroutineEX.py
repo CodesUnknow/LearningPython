@@ -61,6 +61,45 @@ if __name__ == '__main__':
     t2.join()
     t1.join()
 """
+# EX1.2 一个线程被创建以后，需要调用start来启动这个线程，启动后的线程会在所属的系统级线程中执行，一旦启动以后
+# 这些线程会完全由操作系统管理，直到目标函数返回为止，可以查询线程的对象来判断它是否还在运行
+# 如果要终止进程，就要使得目标函数能够在某个制定的点上退出，需要在程序中设置相应的判断
+# 因此实现起来的话有几种方式，或者设置一个全局变量在目标函数之外改变它；或者将目标函数设置为类的一个函数，通过
+# 类中的其他函数改变类的属性的方式实现；或者函数之间通信（协程），下面先用类的方式来实现
+def count(n):
+	while n>0:
+		print('T-mius',n)
+		n -= 1
+		time.sleep(1)
+t = threading.Thread(target=count,args=(3,))
+t.start()
+n = 3
+while n>0:
+	if t.is_alive():
+		print('thread still alive')
+		time.sleep(0.5)
+	else:
+		print('dead')
+	n -= 1
+# class实现退出线程的判断,根据running标志位来判断是否退出函数
+class countdown:
+	def __init__(self):
+		self.running = True
+	def terminate(self):
+		self.running = False
+	def run(self,n):
+		while self.running and n>0 :
+			print('class T-mius',n)
+			n -= 1
+			time.sleep(1)
+		print('t1 blocked!')
+count1 = countdown()
+t1 = threading.Thread(target=count1.run,args=(3,))
+t1.start()
+count1.terminate()
+
+		
+
 # EX2 coroutine way
 #正常情况下，声明一个生成器函数对象之后，这个对象的状态是创建，需要使用next函数激活使其处于挂起状态才可以接收外部send
 #可以借助函数装饰器，在装饰器中完成next函数的功能，这样我们就无需预先激活，直接向这个对象发送参数了。
