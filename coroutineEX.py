@@ -18,8 +18,10 @@ from collections import namedtuple
 # EX1,进程和线程的练习，两个子函数分别从不同的代理网站爬取页面上的代理，并存储到一个List中去；
 # 正常的执行顺序下，需要爬取完其中一个web，再去执行另外一个web
 # 可以利用进程和线程让这两个爬取工作同时完成。
+# 谈一下GIL的问题，GIL是在python的部分解释器中实现的，由于GIL的存在，始终会有一个线程占用GIL，致使python无法发挥多核的作用，
+# 这个问题尤其在密集运算型的线程中明显，在异步IO中由于IO响应的时间差，即便GIL存在我们也能够通过多线程提高效率
 """
-#run_proc1 和run_proc2是单独的爬取函数；
+#run_proc1 和run_proc2是单独的爬取函数；这个例子说明了多线程在IO上的优越性
 def run_proc1():
     url = 'https://www.kuaidaili.com/free/inha/'
     pages = PAGES_SET
@@ -60,6 +62,39 @@ if __name__ == '__main__':
     t2.start()
     t2.join()
     t1.join()
+"""
+"""
+#而下面这个密集运算型的例子，多线程就无法发挥其在异步IO中的高效
+def my_counter():
+    i = 0
+    for _ in range(100000000):
+        i = i + 1
+    return True
+
+
+def main():
+    thread_array = {}
+    start_time = time.time()
+    for tid in range(2):
+        t = Thread(target=my_counter)
+        t.start()
+        t.join()
+    end_time = time.time()
+    print("Total time: {}".format(end_time - start_time))
+
+def main1():
+    thread_array = {}
+    start_time = time.time()
+    for tid in range(2):
+        t = Thread(target=my_counter)
+        t.start()
+        thread_array[tid] = t
+    for i in range(2):
+        thread_array[i].join()
+    end_time = time.time()
+    print("Total time: {}".format(end_time - start_time))
+if __name__ == '__main__':
+    main1()
 """
 # EX2 coroutine way
 #正常情况下，声明一个生成器函数对象之后，这个对象的状态是创建，需要使用next函数激活使其处于挂起状态才可以接收外部send
