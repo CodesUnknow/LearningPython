@@ -6,8 +6,9 @@ python的协程语法有些不好理解，要追溯到生成器函数，在生�
 import requests
 import re
 import redis
-import os, time, random, threading
+import os, time, random
 from multiprocessing import Process, Pool, Queue
+from threading import Thread,Event
 import subprocess
 import aiohttp
 import asyncio
@@ -61,10 +62,6 @@ if __name__ == '__main__':
     t1.start()
     t2.start()
     t2.join()
-    t1.join()
-"""
-<<<<<<< HEAD
-"""
 #而下面这个密集运算型的例子，多线程就无法发挥其在异步IO中的高效
 def my_counter():
     i = 0
@@ -96,8 +93,6 @@ def main1():
     print("Total time: {}".format(end_time - start_time))
 if __name__ == '__main__':
     main1()
-"""
-=======
 # EX1.2 一个线程被创建以后，需要调用start来启动这个线程，启动后的线程会在所属的系统级线程中执行，一旦启动以后
 # 这些线程会完全由操作系统管理，直到目标函数返回为止，可以查询线程的对象来判断它是否还在运行
 # 如果要终止进程，就要使得目标函数能够在某个制定的点上退出，需要在程序中设置相应的判断
@@ -132,12 +127,11 @@ class countdown:
 		print('t1 blocked!')
 count1 = countdown()
 t1 = threading.Thread(target=count1.run,args=(3,))
-t1.start()
-count1.terminate()
-
+#t1.start()
+#count1.terminate()
+"""
 		
 
->>>>>>> 216891d1c78bbe373dd92c5b8cb08b868c345a83
 # EX2 coroutine way
 #正常情况下，声明一个生成器函数对象之后，这个对象的状态是创建，需要使用next函数激活使其处于挂起状态才可以接收外部send
 #可以借助函数装饰器，在装饰器中完成next函数的功能，这样我们就无需预先激活，直接向这个对象发送参数了。
@@ -212,3 +206,35 @@ if __name__ == '__main__':
 		group.send(None)
 	print(result)
 """
+#EX4 EVENT来同步线程的活动
+#在这个程序中，函数countdown被创建为一个线程,并且绑定了一个事件，并且函数中设置了等待状态，去判断绑定事件的状态，通过在主函数中
+#改变这个事件的状态，来控制线程的流程
+from threading import Thread, Event
+import time
+
+# Code to execute in an independent thread
+def countdown(n, started_evt):
+	print("countdown starting")
+	started_evt.wait()
+	while n > 0:
+		print("T-minus", n)
+		n -= 1
+		time.sleep(1)
+		if n == 3:
+			print('I am sleeping')
+			started_evt.clear()
+			started_evt.wait()
+
+
+# Create the event object that will be used to signal startup
+started_evt = Event()
+
+# Launch the thread and pass the startup event
+print("Launching countdown")
+t = Thread(target=countdown, args=(10,started_evt))
+t.start()
+# Wait for the thread to start
+print("warting for running")
+time.sleep(2)
+started_evt.set()
+
