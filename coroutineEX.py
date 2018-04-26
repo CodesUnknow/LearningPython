@@ -5,14 +5,11 @@ python的协程语法有些不好理解，要追溯到生成器函数，在生�
 """
 import requests
 import re
-import redis
 import os, time, random
 import threading
 from multiprocessing import Process, Pool, Queue
 from threading import Thread,Event
 import subprocess
-import aiohttp
-import asyncio
 from functools import wraps
 from collections import namedtuple
 
@@ -238,6 +235,10 @@ t = Thread(target=countdown, args=(10,started_evt))
 print("warting for running")
 time.sleep(2)
 #started_evt.set()
+#EX5,在这个例子里面使用condition对象来捕获一个不断重复状态变换的事件
+#在类中声明的方法会对象声明时确定的时间间隔来刷新时间状态，类似于在处理器的时钟上升沿更新输出
+#刚开始理解代码起来有些困难，要用稍微分裂一些的思维去分析，对于事件的状态的捕捉，要在另一个线程或者同一个类中的不同函数之间去实现
+#在满足上面条件的情况下，去实现我们的线程并发目的，就简单了。
 class PeriodicTimer:
     def __init__(self, interval):
         self._interval = interval
@@ -270,7 +271,7 @@ class PeriodicTimer:
 
 # Example use of the timer
 ptimer = PeriodicTimer(5)
-ptimer.start()
+#ptimer.start()
 
 # Two threads that synchronize on the timer
 def countdown(nticks):
@@ -286,5 +287,34 @@ def countup(last):
         print("Counting", n)
         n += 1
 
-Thread(target=countdown, args=(10,)).start()
-Thread(target=countup, args=(5,)).start()
+#Thread(target=countdown, args=(10,)).start()
+#Thread(target=countup, args=(5,)).start()
+#EX5,semaphore在线程中的应用
+# Worker thread
+def worker(n, sema):
+    # Wait to be signalled
+    sema.acquire()
+    # Do some work
+    print("Working", n)
+
+# Create some threads
+sema = threading.Semaphore(0)
+nworkers = 10
+for n in range(nworkers):
+    t = threading.Thread(target=worker, args=(n, sema,))
+    t.daemon=True
+    t.start()
+
+print('About to release 4 worker')
+time.sleep(5)
+sema.release()
+sema.release()
+sema.release()
+sema.release()
+
+time.sleep(1)
+print('About to release second worker')
+time.sleep(5)
+sema.release()
+time.sleep(1)
+print('Goodbye')
